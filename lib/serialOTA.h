@@ -1,10 +1,12 @@
+#ifndef NS_SERIAL_OTA
+#define NS_SERIAL_OTA
+
 #include "string.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
 
 #include "esp_system.h"
-#include "esp_event_loop.h"
 #include "esp_log.h"
 #include "esp_ota_ops.h"
 #include "esp_flash_partitions.h"
@@ -32,17 +34,17 @@
 #define MIN_CHUNKSIZE 512
 #define HASH_LEN 32 /* SHA-256 digest length */
 
-const char *SERIAL_OTA_TAG = "SerialOTA";
+static const char *SERIAL_OTA_TAG = "SerialOTA";
 /*an ota data write buffer ready to write to the flash*/
-uint8_t ota_write_data[MAX_BUFFSIZE + 1] = {0};
+static uint8_t ota_write_data[MAX_BUFFSIZE + 1] = {0};
 /*Intermediary buffer*/
-uint8_t serial_ota_data[MAX_BUFFSIZE] = {0};
+static uint8_t serial_ota_data[MAX_BUFFSIZE] = {0};
 /*ring buffer cache*/
 ring_buffer_t serial_ota_cache_buffer;
 
 /*Critical error string*/
 #define OTA_ERROR_BUFFER_SIZE 256
-char ota_critical_error_str[OTA_ERROR_BUFFER_SIZE] = {0};
+static char ota_critical_error_str[OTA_ERROR_BUFFER_SIZE] = {0};
 /*Error print for ota*/
 #define OTA_ERROR_LOG()                                         \
     {                                                           \
@@ -127,8 +129,8 @@ int serial_ota_resend_request();
  *
  * @return result
  */
-int serial_ota_read_packet(uint8_t *buffer, serial_ota_communication_header communication_header);
-void print_sha256(const uint8_t *image_hash, const char *label);
+int serial_ota_read_packet(uint8_t*, serial_ota_communication_header);
+void print_sha256(const uint8_t* , const char*);
 void infinite_loop(void);
 esp_err_t uart_setup(void);
 /**
@@ -136,12 +138,14 @@ esp_err_t uart_setup(void);
  *
  * @param header pointer to header
  */
-void serial_ota_comm_header_checks(serial_ota_communication_header *header);
+void serial_ota_comm_header_checks(serial_ota_communication_header*);
 /**
  * @brief In case of error wait for closing packet
  *
  */
-void serial_ota_update_error(serial_ota_communication_header communication_header);
-void ota_example_task(void *pvParameter);
+void serial_ota_update_error(serial_ota_communication_header);
+void ota_example_task(void *);
 /*As an example, init in main*/
 void ota_startup();
+
+#endif

@@ -1,9 +1,13 @@
 {
-    "files.associations": {
-        "*.ejs": "html",
-        "freertos.h": "c",
-        "ringbuffer.h": "c",
-        "event_groups.h": "c"
-    },
-    "git.detectSubmodules": false,
+  "C_Cpp.intelliSenseEngine": "Tag Parser",
+  "idf.adapterTargetName": "esp32",
+  "git.detectSubmodules": false,
+  "idf.port": "/dev/cu.usbserial-0001",
+  "files.associations": {
+    "*.ejs": "html",
+    "serialota.h": "c",
+    "*.ipp": "c",
+    "freertos.h": "c"
+  },
+  "idf.flashType": "UART",
 }

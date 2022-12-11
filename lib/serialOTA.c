@@ -237,6 +237,9 @@ void serial_ota_update_error(serial_ota_communication_header communication_heade
             ESP_LOGE(SERIAL_OTA_TAG, "Update last packet arrived, we can safely restart");
             esp_restart();
             break;
+
+        default:
+            break;
         }
 #ifdef DEBUG
         OTA_ERROR_LOG()
@@ -247,6 +250,7 @@ void serial_ota_update_error(serial_ota_communication_header communication_heade
 
 void ota_example_task(void *pvParameter)
 {
+    ESP_LOGI(SERIAL_OTA_TAG, "Starting OTA Task");
     esp_err_t err;
     /* update handle : set by esp_ota_begin(), must be freed via esp_ota_end() */
     esp_ota_handle_t update_handle = 0;
@@ -284,7 +288,7 @@ void ota_example_task(void *pvParameter)
              update_partition->subtype, update_partition->address);
     assert(update_partition != NULL);
 
-    /*Wait for header packet*/
+    ESP_LOGI(SERIAL_OTA_TAG, "Waiting for header");
     uart_flush(HAL_SERIAL_UART);
     serial_ota_communication_header ota_header = serial_ota_wait_header();
     ESP_LOGI(SERIAL_OTA_TAG, "Received header :");
