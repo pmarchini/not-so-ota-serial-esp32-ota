@@ -41,7 +41,7 @@ class Modbus(object):
 
 
 
-class cbe_serial_ota_communication_header:
+class serial_ota_communication_header:
     magic_word = []
     header_crc = 0x0
     ota_update_mode = 0x0
@@ -191,10 +191,10 @@ def main(argv):
     s.timeout = 0.07
     time.sleep(1)
     # PreSync message
-    preSyncHeader = cbe_serial_ota_communication_header(magic_word=[0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF])
+    preSyncHeader = serial_ota_communication_header(magic_word=[0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF])
     preSyncHeader.create_packet()
     # Header ota message
-    otaHeader = cbe_serial_ota_communication_header()
+    otaHeader = serial_ota_communication_header()
     if(i_mode == '--force'):
         otaHeader.ota_update_mode = 0x1
     

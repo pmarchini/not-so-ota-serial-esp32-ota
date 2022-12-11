@@ -2,11 +2,11 @@
 
 // TODO: Refactor following functions improving readability
 
-cbe_serial_ota_communication_header cbe_serial_ota_wait_header()
+serial_ota_communication_header serial_ota_wait_header()
 {
-    //TODO -> restart timeout
-    cbe_serial_ota_communication_header t_serial_ota_header;
-    uint8_t magic_word[6] = CBE_SERIAL_UART_MAGIC_WORD;
+    // TODO -> restart timeout
+    serial_ota_communication_header t_serial_ota_header;
+    uint8_t magic_word[6] = SERIAL_UART_MAGIC_WORD;
     bool crc_flag = false;
     uint8_t crc = 0;
     uint8_t *t_ptr;
@@ -15,7 +15,7 @@ cbe_serial_ota_communication_header cbe_serial_ota_wait_header()
         crc = 0;
         uart_flush(HAL_SERIAL_UART);
         uart_read_bytes(HAL_SERIAL_UART, &t_serial_ota_header, sizeof(t_serial_ota_header), 5000);
-        if (memcmp(&t_serial_ota_header, magic_word, sizeof(magic_word)) != 0) //TODO -> magic word restart
+        if (memcmp(&t_serial_ota_header, magic_word, sizeof(magic_word)) != 0) // TODO -> magic word restart
         {
             ESP_LOGE(SERIAL_OTA_TAG, "recv:");
             ESP_LOG_BUFFER_HEXDUMP(SERIAL_OTA_TAG, &t_serial_ota_header, 6, ESP_LOG_ERROR);
@@ -48,101 +48,101 @@ cbe_serial_ota_communication_header cbe_serial_ota_wait_header()
     return t_serial_ota_header;
 }
 
-int cbe_serial_ota_resend_request()
+int serial_ota_resend_request()
 {
     /*needs to set tx to HIGH -> to be checked*/
-    gpio_set_level(HAL_SERIAL_RTSPIN, CBE_RTS_PIN_TX); 
+    gpio_set_level(HAL_SERIAL_RTSPIN, RTS_PIN_TX);
     char bytes[3] = {0x0, 0x1, 0x0};
     uart_write_bytes(HAL_SERIAL_UART, bytes, 3);
-    gpio_set_level(HAL_SERIAL_RTSPIN, CBE_RTS_PIN_RX); 
+    gpio_set_level(HAL_SERIAL_RTSPIN, RTS_PIN_RX);
     return 0;
 }
 
-int cbe_serial_ota_read_packet(uint8_t *buffer, cbe_serial_ota_communication_header communication_header)
+serial_uart_decode_errors serial_ota_read_packet(uint8_t *buffer, serial_ota_communication_header communication_header)
 {
-    cbe_serial_ota_packet_header t_header;
+    serial_ota_packet_header t_header;
     int data_len = 0;
     unsigned char crc = 0;
-    memset(&cbe_serial_ota_data, 0, sizeof(cbe_serial_ota_data));
+    memset(&serial_ota_data, 0, sizeof(serial_ota_data));
 
-    data_len = uart_read_bytes(HAL_SERIAL_UART, cbe_serial_ota_data, communication_header.ota_chunk_size + sizeof(cbe_serial_ota_packet_header), 5);
+    data_len = uart_read_bytes(HAL_SERIAL_UART, serial_ota_data, communication_header.ota_chunk_size + sizeof(serial_ota_packet_header), 5);
     if (data_len < 0)
     {
         ESP_LOGE(SERIAL_OTA_TAG, "Error: UART data read error");
         task_fatal_error();
     }
 
-    if (data_len >= sizeof(cbe_serial_ota_packet_header))
+    if (data_len >= sizeof(serial_ota_packet_header))
     {
-        memcpy(&t_header, &cbe_serial_ota_data, sizeof(cbe_serial_ota_packet_header));
-        if (ring_buffer_contains_element(&cbe_serial_ota_cache_buffer, t_header.packet_id) == 0)
+        memcpy(&t_header, &serial_ota_data, sizeof(serial_ota_packet_header));
+        if (ring_buffer_contains_element(&serial_ota_cache_buffer, t_header.packet_id) == 0)
         {
-            if (data_len != (sizeof(cbe_serial_ota_packet_header) + t_header.packet_len))
+            if (data_len != (sizeof(serial_ota_packet_header) + t_header.packet_len))
             {
-                CBE_OTA_ERROR_INSERT("Packet len not correct, expected:%d , found:%d",
-                                     (sizeof(cbe_serial_ota_packet_header) + t_header.packet_len),
-                                     data_len);
-                return CBE_SERIAL_UART_DECODE_ERR_PACK_LEN;
+                OTA_ERROR_INSERT("Packet len not correct, expected:%d , found:%d",
+                                 (sizeof(serial_ota_packet_header) + t_header.packet_len),
+                                 data_len);
+                return ERR_PACK_LEN;
             }
-            if (!ring_buffer_is_empty(&cbe_serial_ota_cache_buffer) &&
-                ring_buffer_get_head_element(&cbe_serial_ota_cache_buffer) != t_header.packet_id - 1 &&
+            if (!ring_buffer_is_empty(&serial_ota_cache_buffer) &&
+                ring_buffer_get_head_element(&serial_ota_cache_buffer) != t_header.packet_id - 1 &&
                 t_header.packet_len != 0)
             {
-                CBE_OTA_ERROR_INSERT("At least one packet is missing, current packet received:%d, last in buffer:%d",
-                                     t_header.packet_id,
-                                     ring_buffer_get_head_element(&cbe_serial_ota_cache_buffer));
-                return CBE_SERIAL_UART_DECODE_PACKET_LOST;
+                OTA_ERROR_INSERT("At least one packet is missing, current packet received:%d, last in buffer:%d",
+                                 t_header.packet_id,
+                                 ring_buffer_get_head_element(&serial_ota_cache_buffer));
+                return PACKET_LOST;
             }
             /*Calculate packet crc*/
-            for (int index = (sizeof(cbe_serial_ota_packet_header)); index < (t_header.packet_len + sizeof(cbe_serial_ota_packet_header)); index++)
+            for (int index = (sizeof(serial_ota_packet_header)); index < (t_header.packet_len + sizeof(serial_ota_packet_header)); index++)
             {
-                CRC8(crc, cbe_serial_ota_data[index]);
+                CRC8(crc, serial_ota_data[index]);
             }
             if (t_header.packet_crc == crc)
             {
                 if (t_header.packet_len == 0)
                 {
                     ESP_LOGI(SERIAL_OTA_TAG, "Closing packet received");
-                    return CBE_SERIAL_UART_DECODE_FINAL_PACKET;
+                    return FINAL_PACKET;
                 }
                 /*add to cache the packet id*/
-                ring_buffer_queue(&cbe_serial_ota_cache_buffer, t_header.packet_id);
+                ring_buffer_queue(&serial_ota_cache_buffer, t_header.packet_id);
                 memset(buffer, 0, communication_header.ota_chunk_size + 1);
-                memcpy(buffer, &cbe_serial_ota_data[sizeof(t_header)], t_header.packet_len);
+                memcpy(buffer, &serial_ota_data[sizeof(t_header)], t_header.packet_len);
                 return t_header.packet_len;
             }
             else
             {
-                CBE_OTA_ERROR_INSERT("Packet id:%d, crc expected %d found %d",
-                                     t_header.packet_id,
-                                     t_header.packet_crc,
-                                     crc);
-                return CBE_SERIAL_UART_DECODE_WRONG_CRC;
+                OTA_ERROR_INSERT("Packet id:%d, crc expected %d found %d",
+                                 t_header.packet_id,
+                                 t_header.packet_crc,
+                                 crc);
+                return WRONG_CRC;
             }
         }
         else
         {
-            CBE_OTA_ERROR_INSERT("Packet id:%d is just present",
-                                 t_header.packet_id);
-            return CBE_SERIAL_UART_DECODE_PACKET_JUST_PRESENT;
+            OTA_ERROR_INSERT("Packet id:%d is just present",
+                             t_header.packet_id);
+            return PACKET_JUST_PRESENT;
         }
     }
-    else if (data_len > 0 && data_len < sizeof(cbe_serial_ota_packet_header))
+    else if (data_len > 0 && data_len < sizeof(serial_ota_packet_header))
     {
-        CBE_OTA_ERROR_INSERT("Packet size is too short, expected at least %d, found:%d",
-                             sizeof(cbe_serial_ota_packet_header),
-                             data_len);
-        return CBE_SERIAL_UART_DECODE_PACKET_TOO_SHORT;
+        OTA_ERROR_INSERT("Packet size is too short, expected at least %d, found:%d",
+                         sizeof(serial_ota_packet_header),
+                         data_len);
+        return PACKET_TOO_SHORT;
     }
     else if (data_len == 0)
     {
-        CBE_OTA_ERROR_INSERT("Data timeout");
-        return CBE_SERIAL_UART_DECODE_PACKET_NO_DATA_TIMEOUT;
+        OTA_ERROR_INSERT("Data timeout");
+        return PACKET_NO_DATA_TIMEOUT;
     }
     else
     {
-        CBE_OTA_ERROR_INSERT("Undefined error");
-        return CBE_SERIAL_UART_DECODE_PACKET_UNDEF_ERR;
+        OTA_ERROR_INSERT("Undefined error");
+        return PACKET_UNDEF_ERR;
     }
 }
 
@@ -172,13 +172,13 @@ esp_err_t uart_setup(void)
 {
     esp_err_t ret = ESP_OK;
     const uart_config_t uart_config = {
-        .baud_rate = 115200, //TODO -> from header packet, first start -> 9600
+        .baud_rate = 115200, // TODO -> from header packet, first start -> 9600
         .data_bits = UART_DATA_8_BITS,
         .parity = UART_PARITY_DISABLE,
         .stop_bits = UART_STOP_BITS_1,
         .flow_ctrl = UART_HW_FLOWCTRL_DISABLE};
 
-    //update UART config
+    // update UART config
     ret = uart_param_config(HAL_SERIAL_UART, &uart_config);
     if (ret != ESP_OK)
     {
@@ -186,7 +186,7 @@ esp_err_t uart_setup(void)
         return ret;
     }
 
-    //set IO pins
+    // set IO pins
     ret = uart_set_pin(HAL_SERIAL_UART, HAL_SERIAL_TXPIN, HAL_SERIAL_RXPIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
     if (ret != ESP_OK)
     {
@@ -196,9 +196,9 @@ esp_err_t uart_setup(void)
 
     gpio_reset_pin(HAL_SERIAL_RTSPIN);
     gpio_set_direction(HAL_SERIAL_RTSPIN, GPIO_MODE_OUTPUT);
-    gpio_set_level(HAL_SERIAL_RTSPIN, 0); //Metto in ricezione
+    gpio_set_level(HAL_SERIAL_RTSPIN, 0); // Metto in ricezione
 
-    //Install UART driver with RX and TX buffers
+    // Install UART driver with RX and TX buffers
     ret = uart_driver_install(HAL_SERIAL_UART, MAX_BUFFSIZE, MAX_BUFFSIZE, 0, NULL, 0);
     if (ret != ESP_OK)
     {
@@ -209,7 +209,7 @@ esp_err_t uart_setup(void)
     return ESP_OK;
 }
 
-void cbe_serial_ota_comm_header_checks(cbe_serial_ota_communication_header *header)
+void serial_ota_comm_header_checks(serial_ota_communication_header *header)
 {
     if (header->ota_chunk_size > MAX_BUFFSIZE ||
         header->ota_chunk_size < MIN_CHUNKSIZE)
@@ -220,26 +220,26 @@ void cbe_serial_ota_comm_header_checks(cbe_serial_ota_communication_header *head
     }
 }
 
-void cbe_serial_ota_update_error(cbe_serial_ota_communication_header communication_header)
+void serial_ota_update_error(serial_ota_communication_header communication_header)
 {
     ESP_LOGE(SERIAL_OTA_TAG, "Update failed, waiting for restart command or timeout");
-    int timeout = CBE_SERIAL_UART_TIMEOUT_TICKS;
+    int timeout = SERIAL_UART_TIMEOUT_TICKS;
     while (timeout > 0)
     {
         uart_flush(HAL_SERIAL_UART);
-        switch (cbe_serial_ota_read_packet(ota_write_data, communication_header))
+        switch (serial_ota_read_packet(ota_write_data, communication_header))
         {
-        case CBE_SERIAL_UART_DECODE_PACKET_NO_DATA_TIMEOUT:
+        case PACKET_NO_DATA_TIMEOUT:
             timeout--;
             break;
 
-        case CBE_SERIAL_UART_DECODE_FINAL_PACKET:
+        case FINAL_PACKET:
             ESP_LOGE(SERIAL_OTA_TAG, "Update last packet arrived, we can safely restart");
             esp_restart();
             break;
         }
-#ifdef CBE_DEBUG
-        CBE_OTA_ERROR_LOG()
+#ifdef DEBUG
+        OTA_ERROR_LOG()
 #endif
     }
     esp_restart();
@@ -252,11 +252,11 @@ void ota_example_task(void *pvParameter)
     esp_ota_handle_t update_handle = 0;
     const esp_partition_t *update_partition = NULL;
 
-    int cbe_serial_ota_timeout = 0;
-    int cbe_serial_ota_attempts = 0;
+    int serial_ota_timeout = 0;
+    int serial_ota_attempts = 0;
 
     /*Init ring buffer*/
-    ring_buffer_init(&cbe_serial_ota_cache_buffer);
+    ring_buffer_init(&serial_ota_cache_buffer);
 
     ESP_LOGI(SERIAL_OTA_TAG, "Starting Update");
 
@@ -286,20 +286,20 @@ void ota_example_task(void *pvParameter)
 
     /*Wait for header packet*/
     uart_flush(HAL_SERIAL_UART);
-    cbe_serial_ota_communication_header cbe_ota_header = cbe_serial_ota_wait_header();
+    serial_ota_communication_header ota_header = serial_ota_wait_header();
     ESP_LOGI(SERIAL_OTA_TAG, "Received header :");
-    ESP_LOG_BUFFER_HEXDUMP(SERIAL_OTA_TAG, &cbe_ota_header, sizeof(cbe_ota_header), ESP_LOG_INFO);
-    cbe_serial_ota_comm_header_checks(&cbe_ota_header);
+    ESP_LOG_BUFFER_HEXDUMP(SERIAL_OTA_TAG, &ota_header, sizeof(ota_header), ESP_LOG_INFO);
+    serial_ota_comm_header_checks(&ota_header);
 
     int binary_file_length = 0;
     /*deal with all receive packet*/
     bool image_header_was_checked = false;
     while (1)
     {
-        int data_read = cbe_serial_ota_read_packet(ota_write_data, cbe_ota_header);
+        int data_read = serial_ota_read_packet(ota_write_data, ota_header);
         if (data_read > 0)
         {
-            cbe_serial_ota_timeout = 0;
+            serial_ota_timeout = 0;
 
             if (image_header_was_checked == false)
             {
@@ -337,7 +337,7 @@ void ota_example_task(void *pvParameter)
 
                     if (memcmp(new_app_info.version, running_app_info.version, sizeof(new_app_info.version)) == 0)
                     {
-                        if (cbe_ota_header.ota_update_mode == CBE_OTA_UPDATE_MODE_FORCE_OVERWRITE)
+                        if (ota_header.ota_update_mode == FORCE_OVERWRITE)
                         {
                             ESP_LOGW(SERIAL_OTA_TAG, "Overwrite mode selected");
                             ESP_LOGW(SERIAL_OTA_TAG, "Current running version is the same as a new, forcing write");
@@ -381,39 +381,39 @@ void ota_example_task(void *pvParameter)
         }
         else if (data_read < 0)
         {
-            CBE_OTA_ERROR_LOG()
+            OTA_ERROR_LOG()
             switch (data_read)
             {
-            case CBE_SERIAL_UART_DECODE_PACKET_NO_DATA_TIMEOUT:
-                cbe_serial_ota_timeout++;
-                if (cbe_serial_ota_timeout > CBE_SERIAL_UART_TIMEOUT_TICKS)
+            case PACKET_NO_DATA_TIMEOUT:
+                serial_ota_timeout++;
+                if (serial_ota_timeout > SERIAL_UART_TIMEOUT_TICKS)
                 {
                     esp_restart();
                 }
                 break;
 
-            case CBE_SERIAL_UART_DECODE_WRONG_CRC:
+            case WRONG_CRC:
                 /*TODO -> test this*/
-                if (cbe_serial_ota_resend_request() < 0 ||
-                    cbe_serial_ota_attempts > CBE_SERIAL_OTA_MAX_NR_ATTEMPS)
+                if (serial_ota_resend_request() < 0 ||
+                    serial_ota_attempts > SERIAL_OTA_MAX_NR_ATTEMPS)
                 {
-                    cbe_serial_ota_update_error(cbe_ota_header);
+                    serial_ota_update_error(ota_header);
                 }
-                cbe_serial_ota_attempts++;
+                serial_ota_attempts++;
                 break;
 
-            case CBE_SERIAL_UART_DECODE_PACKET_LOST:
-                cbe_serial_ota_update_error(cbe_ota_header);
+            case PACKET_LOST:
+                serial_ota_update_error(ota_header);
                 break;
 
-            case CBE_SERIAL_UART_DECODE_ERR_PACK_LEN:
-                if (cbe_serial_ota_resend_request() < 0 ||
-                    cbe_serial_ota_attempts > CBE_SERIAL_OTA_MAX_NR_ATTEMPS)
+            case ERR_PACK_LEN:
+                if (serial_ota_resend_request() < 0 ||
+                    serial_ota_attempts > SERIAL_OTA_MAX_NR_ATTEMPS)
                 {
-                    cbe_serial_ota_update_error(cbe_ota_header);
+                    serial_ota_update_error(ota_header);
                 }
-                cbe_serial_ota_attempts++;
-                cbe_serial_ota_update_error(cbe_ota_header);
+                serial_ota_attempts++;
+                serial_ota_update_error(ota_header);
                 break;
             }
         }
@@ -442,7 +442,7 @@ void ota_startup()
     uint8_t sha_256[HASH_LEN] = {0};
     esp_partition_t partition;
 
-    //set debug output
+    // set debug output
     esp_log_level_set("*", ESP_LOG_DEBUG);
     esp_log_level_set(SERIAL_OTA_TAG, ESP_LOG_DEBUG);
 
