@@ -1,0 +1,13 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: File corrente",
+            "args": ["-i","COM3","-f","..\\.pio\\build\\esp32dev\\firmware.bin","-m","--force","-s","15360"],
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal"
+        }
+    ]
+}
