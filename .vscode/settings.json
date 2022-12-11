@@ -1,0 +1,9 @@
+{
+    "files.associations": {
+        "*.ejs": "html",
+        "freertos.h": "c",
+        "ringbuffer.h": "c",
+        "event_groups.h": "c"
+    },
+    "git.detectSubmodules": false,
+}

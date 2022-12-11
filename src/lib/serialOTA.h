@@ -14,8 +14,8 @@
 #include "nvs_flash.h"
 #include "driver/gpio.h"
 #include "driver/uart.h"
-#include "crc.h"
-#include "ringbuffer.h"
+#include "deps/crc/crc.h"
+#include "deps/ringbuffer/ringbuffer.h"
 
 /** @brief TX pin for serial IF to LPC chip */
 #define HAL_SERIAL_TXPIN (GPIO_NUM_17)
