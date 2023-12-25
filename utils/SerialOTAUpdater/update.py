@@ -1,4 +1,5 @@
-# TODO: remove Modbus dependency, can be replaced with digital signals or any other trigger 
+# TODO: remove Modbus dependency, can be replaced with digital signals or
+# any other trigger
 
 import os
 import sys
@@ -20,11 +21,13 @@ class Modbus(object):
 
     def open(self, port, address):
         self.instrument = ModbusClient(
-            method='rtu', port=port, baudrate=38400, timeout=0.05)
+            method='rtu',
+            port=port,
+            baudrate=38400,
+            timeout=0.05
+        )
         self.address = address
         ret = self.instrument.connect()
-        # self.instrument = minimalmodbus.Instrument(port, address)  # port name, slave address (in decimal)
-        # self.instrument.serial.baudrate = 38400
         if ret:
             return 1
         else:
@@ -40,7 +43,8 @@ class Modbus(object):
 def parse_arguments(argv):
     try:
         opts, args = getopt.getopt(
-            argv, "hi:f:m:s:", ["iport=", "ifirmware=", "imode=", "ichunk_size="])
+            argv, "hi:f:m:s:", [
+                "iport=", "ifirmware=", "imode=", "ichunk_size="])
     except getopt.GetoptError:
         print('Usage: update.py -i <input port> -f <firmware.bin>')
         sys.exit(2)
@@ -61,6 +65,7 @@ def parse_arguments(argv):
 
     return i_port, i_firmware, i_mode, i_chunk_size
 
+
 def main(argv):
     i_port, i_firmware, i_mode, i_chunk_size = parse_arguments(argv)
 
@@ -77,13 +82,14 @@ def main(argv):
 
     # This callback is used to restart the device in flash mode
     # in this case the implementation is specific to the modbus protocol used in the project
-    # it should be replaced with a callback that restarts the device in flash mode
+    # it should be replaced with a callback that restarts the device in flash
+    # mode
     def specific_restart_callback():
-            modbus = Modbus()
-            modbus.open(i_port,0)
-            modbus.set_OTA_restart_broadcast()
-            modbus.close()
-            time.sleep(5)
+        modbus = Modbus()
+        modbus.open(i_port, 0)
+        modbus.set_OTA_restart_broadcast()
+        modbus.close()
+        time.sleep(5)
 
     firmware_uploader = FirmwareUploader(
         SerialCommunication(i_port),
@@ -96,6 +102,7 @@ def main(argv):
         firmware_uploader.set_upload_mode(FirmwareUploadMode.FORCE_MODE)
 
     firmware_uploader.upload_firmware()
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])

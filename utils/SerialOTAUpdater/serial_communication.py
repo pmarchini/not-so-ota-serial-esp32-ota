@@ -1,6 +1,7 @@
 import serial
 from serial.serialutil import PARITY_NONE
 
+
 class SerialCommunication:
     def __init__(self, port, baudrate=115200, timeout=0.07):
         self.port = port
@@ -9,7 +10,8 @@ class SerialCommunication:
         self.serial = None
 
     def open(self):
-        self.serial = serial.Serial(self.port, self.baudrate, timeout=self.timeout)
+        self.serial = serial.Serial(
+            self.port, self.baudrate, timeout=self.timeout)
         self.serial.parity = PARITY_NONE
 
     def close(self):

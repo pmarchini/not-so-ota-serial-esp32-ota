@@ -5,22 +5,30 @@ import sys
 from io import StringIO
 import pytest
 
+
 @pytest.fixture
 def mock_serial():
     with patch('serial_communication.serial.Serial') as mock:
         yield mock
+
 
 @pytest.fixture
 def mock_modbus_client():
     with patch('update.ModbusClient') as mock:
         yield mock
 
+
 @pytest.fixture
 def mock_exists():
     with patch('update.os.path.exists', return_value=True) as mock:
         yield mock
 
-def test_main_happy_path_with_snapshot(snapshot, mock_exists, mock_modbus_client, mock_serial):
+
+def test_main_happy_path_with_snapshot(
+        snapshot,
+        mock_exists,
+        mock_modbus_client,
+        mock_serial):
     mock_modbus_instance = MagicMock()
     mock_modbus_client.return_value = mock_modbus_instance
     mock_modbus_instance.connect.return_value = True

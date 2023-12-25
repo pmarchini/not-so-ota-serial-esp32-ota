@@ -3,21 +3,23 @@ import os
 from serial_communication import SerialCommunication
 from communication_packets import serial_ota_communication_header, packet
 
+
 class FirmwareUploadMode():
     STANDARD = 0x0
     FORCE_MODE = 0x1
+
 
 class FirmwareUploader:
     MAX_RESEND = 10
 
     def __init__(
-            self,
-            serial_communication: SerialCommunication,
-            firmware_path,
-            chunk_size=512,
-            restart_callback=lambda: None,
-            mode=FirmwareUploadMode.STANDARD,
-        ):
+        self,
+        serial_communication: SerialCommunication,
+        firmware_path,
+        chunk_size=512,
+        restart_callback=lambda: None,
+        mode=FirmwareUploadMode.STANDARD,
+    ):
         self.serial_communication = serial_communication
         self.firmware_path = firmware_path
         self.chunk_size = chunk_size
@@ -35,16 +37,20 @@ class FirmwareUploader:
         self.send_sync_header()
         time.sleep(1)
         starting_time = time.time()
-        self.upload_chunks() # contains closing packet
+        self.upload_chunks()  # contains closing packet
         ending_time = time.time()
-        print("Firmware transfer completed in {} seconds".format(ending_time - starting_time))
+        print(
+            "Firmware transfer completed in {} seconds".format(
+                ending_time -
+                starting_time))
         self.serial_communication.close()
 
     def set_upload_mode(self, mode):
         self.mode = mode
 
     def send_pre_sync_header(self):
-        pre_sync_header = serial_ota_communication_header(magic_word=[0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF])
+        pre_sync_header = serial_ota_communication_header(
+            magic_word=[0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF])
         pre_sync_header.create_packet()
         for i in range(0, 3):
             self.serial_communication.write(pre_sync_header.packet_header)
@@ -56,7 +62,7 @@ class FirmwareUploader:
         ota_header.set_update_mode(self.mode)
         ota_header.create_packet()
         self.serial_communication.write(ota_header.packet_header)
-    
+
     def send_restart_signal(self):
         self.restart_callback()
 
@@ -67,24 +73,24 @@ class FirmwareUploader:
             is_partition_open = False
             while True:
                 data = file.read(self.chunk_size)
-                # TODO: I presume this should be here, but it's not in the original code 
+                # TODO: I presume this should be here, but it's not in the original code
                 # Should be tested manually before uncommenting
-                #if not data: 
+                # if not data:
                 #    break
 
                 packet_to_send = packet(packet_id)
                 packet_to_send.set_data(data)
                 packet_to_send.create_packet()
                 self.send_packet_with_retry(packet_to_send)
-                
+
                 total_len += len(data)
                 packet_id += 1
 
-                if(total_len >= 512 and not is_partition_open):
+                if (total_len >= 512 and not is_partition_open):
                     is_partition_open = True
                     print("Head sent, waiting 10s for esp to open partition")
                     time.sleep(10)
-                
+
                 if len(packet_to_send.packet_data) < self.chunk_size:
                     break
 
