@@ -7,7 +7,7 @@ import pytest
 
 @pytest.fixture
 def mock_serial():
-    with patch('update.serial.Serial') as mock:
+    with patch('serial_communication.serial.Serial') as mock:
         yield mock
 
 @pytest.fixture
@@ -51,6 +51,8 @@ def test_main_happy_path_with_snapshot(snapshot, mock_exists, mock_modbus_client
     sys.stdout = sys.__stdout__
 
     assert "Firmware transfer completed" in captured_output.getvalue()
+
+    mock_modbus_instance.write_register.assert_called_with(12, 255, unit=0x00)
 
     # Convert bytearrays to a hex string representation
     serial_output_str = '\n'.join([bytes(data).hex() for data in written_data])
