@@ -10,7 +10,7 @@ from serial.serialutil import PARITY_NONE, Timeout
 import getopt
 import crc8
 
-from pymodbus.client.sync import ModbusSerialClient as ModbusClient
+from pymodbus.client import ModbusSerialClient as ModbusClient
 
 from struct import *
 
@@ -39,6 +39,32 @@ class Modbus(object):
     def set_OTA_restart_broadcast(self):
         self.instrument.write_register(12, 255, unit=0x00)
 
+import serial
+from serial.serialutil import PARITY_NONE
+
+class SerialCommunication:
+    def __init__(self, port, baudrate=115200, timeout=0.07):
+        self.port = port
+        self.baudrate = baudrate
+        self.timeout = timeout
+        self.serial = None
+
+    def open(self):
+        self.serial = serial.Serial(self.port, self.baudrate, timeout=self.timeout)
+        self.serial.parity = PARITY_NONE
+
+    def close(self):
+        if self.serial:
+            self.serial.close()
+
+    def write(self, data):
+        if self.serial:
+            self.serial.write(data)
+
+    def read(self):
+        if self.serial:
+            return self.serial.read()
+        return None
 
 
 class serial_ota_communication_header:
@@ -85,13 +111,6 @@ class serial_ota_communication_header:
 
 
 class packet:
-    packet_id = 0
-    packet_crc = 0x0
-    packet_data_len = 0
-    packet_header = []
-    packet_data = []
-    packet = []
-
     def __init__(self, id=0):
         self.packet_id = id
         self.packet_crc = 0
@@ -136,6 +155,68 @@ class packet:
         else:
             self.packet = self.packet_header
 
+class FirmwareUploader:
+    MAX_RESEND = 10
+
+    def __init__(
+            self,
+            serial_communication,
+            firmware_path,
+            chunk_size=512,
+            restart_callback=lambda: None
+        ):
+        self.serial_communication = serial_communication
+        self.firmware_path = firmware_path
+        self.chunk_size = chunk_size
+        self.restart_callback = restart_callback
+
+    def upload_firmware(self):
+        if not os.path.exists(self.firmware_path):
+            raise FileNotFoundError("Firmware file does not exist")
+
+        self.serial_communication.open()
+        self.send_restart_signal()
+        self.upload_chunks()
+        self.serial_communication.close()
+
+    def send_restart_signal(self):
+        self.restart_callback()
+
+    def upload_chunks(self):
+        with open(self.firmware_path, "rb") as file:
+            packet_id = 0
+            total_len = 0
+            while True:
+                data = file.read(self.chunk_size)
+                if not data:
+                    break
+
+                packet = packet(packet_id)
+                packet.set_data(data)
+                packet.create_packet()
+                self.send_packet_with_retry(packet)
+                
+                total_len += len(data)
+                packet_id += 1
+                time.sleep(0.1)
+
+            self.send_closing_packet(packet_id)
+
+    def send_packet_with_retry(self, packet):
+        retries = 0
+        while retries < self.MAX_RESEND:
+            self.serial_communication.write(packet.packet)
+            if self.serial_communication.read() == b'':
+                break
+            retries += 1
+            time.sleep(0.5)
+
+    def send_closing_packet(self, packet_id):
+        closing_packet = packet(packet_id)
+        closing_packet.set_data([])
+        closing_packet.packet_data_len = 0
+        closing_packet.create_packet()
+        self.serial_communication.write(closing_packet.packet)
 
 def main(argv):
 
