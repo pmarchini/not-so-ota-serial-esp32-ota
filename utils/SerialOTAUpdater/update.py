@@ -5,12 +5,11 @@ import sys
 import getopt
 import time
 
-from pymodbus.client import ModbusSerialClient as ModbusClient
-
-from struct import *
-
 from firmware_uploader import FirmwareUploader, FirmwareUploadMode
 from serial_communication import SerialCommunication
+
+from pymodbus.client import ModbusSerialClient as ModbusClient
+
 
 class Modbus(object):
     def __init__(self):
@@ -65,13 +64,6 @@ def parse_arguments(argv):
 def main(argv):
     i_port, i_firmware, i_mode, i_chunk_size = parse_arguments(argv)
 
-    def specific_restart_callback():
-            modbus = Modbus()
-            modbus.open(i_port,0)
-            modbus.set_OTA_restart_broadcast()
-            modbus.close()
-            time.sleep(5)
-
     if not i_port or not i_firmware:
         print('Missing arguments. Usage: update.py -i <input port> -f <firmware.bin>')
         sys.exit()
@@ -83,9 +75,18 @@ def main(argv):
     if i_chunk_size < 512 or i_chunk_size > 16384:
         i_chunk_size = 512
 
-    serial_comm = SerialCommunication(i_port)
+    # This callback is used to restart the device in flash mode
+    # in this case the implementation is specific to the modbus protocol used in the project
+    # it should be replaced with a callback that restarts the device in flash mode
+    def specific_restart_callback():
+            modbus = Modbus()
+            modbus.open(i_port,0)
+            modbus.set_OTA_restart_broadcast()
+            modbus.close()
+            time.sleep(5)
+
     firmware_uploader = FirmwareUploader(
-        serial_comm,
+        SerialCommunication(i_port),
         i_firmware,
         i_chunk_size,
         specific_restart_callback
