@@ -1,3 +1,27 @@
+/*
+MIT License
+
+Copyright (c) 2023 Pietro Marchini
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
 #include "serialOTA.h"
 
 // TODO: Refactor following functions improving readability
@@ -248,7 +272,7 @@ void serial_ota_update_error(serial_ota_communication_header communication_heade
     esp_restart();
 }
 
-void ota_example_task(void *pvParameter)
+void ns_ota_task(void *pvParameter)
 {
     ESP_LOGI(SERIAL_OTA_TAG, "Starting OTA Task");
     esp_err_t err;
@@ -491,5 +515,5 @@ void ota_startup()
         err = nvs_flash_init();
     }
     ESP_ERROR_CHECK(err);
-    xTaskCreate(&ota_example_task, "OTA", 8192, NULL, 5, NULL);
+    xTaskCreate(&ns_ota_task, "OTA", 8192, NULL, 5, NULL);
 }
