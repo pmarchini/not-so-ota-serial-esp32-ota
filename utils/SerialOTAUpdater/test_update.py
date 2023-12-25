@@ -1,4 +1,3 @@
-# test_update.py
 from unittest.mock import patch, MagicMock, mock_open
 import update
 import sys
@@ -25,10 +24,11 @@ def mock_exists():
 
 
 def test_main_happy_path_with_snapshot(
-        snapshot,
-        mock_exists,
-        mock_modbus_client,
-        mock_serial):
+    snapshot,
+    mock_exists,
+    mock_modbus_client,
+    mock_serial
+):
     mock_modbus_instance = MagicMock()
     mock_modbus_client.return_value = mock_modbus_instance
     mock_modbus_instance.connect.return_value = True
